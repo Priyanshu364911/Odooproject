@@ -1,6 +1,7 @@
 import { User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +14,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function Header() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
@@ -27,10 +34,10 @@ export function Header() {
             <Button variant="ghost" className="gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  JD
+                  {user?.firstName?.[0]}{user?.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
-              <span className="hidden md:inline">John Doe</span>
+              <span className="hidden md:inline">{user?.fullName}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
@@ -43,7 +50,7 @@ export function Header() {
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-destructive"
-              onClick={() => navigate("/login")}
+              onClick={handleLogout}
             >
               Log out
             </DropdownMenuItem>

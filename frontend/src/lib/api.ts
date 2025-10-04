@@ -6,7 +6,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 second timeout
 });
+
+console.log('API initialized with baseURL:', api.defaults.baseURL);
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -55,6 +58,7 @@ export interface User {
   };
   department?: string;
   position?: string;
+  phone?: string;
   isActive: boolean;
   fullName: string;
 }
@@ -170,8 +174,16 @@ export const authApi = {
   },
 
   signup: async (data: SignupRequest): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/auth/signup', data);
-    return response.data;
+    console.log('Signup API called with:', data);
+    console.log('API base URL:', api.defaults.baseURL);
+    try {
+      const response = await api.post<AuthResponse>('/auth/signup', data);
+      console.log('Signup response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Signup API error:', error);
+      throw error;
+    }
   },
 
   getProfile: async (): Promise<{ success: boolean; data: { user: User } }> => {
@@ -252,7 +264,7 @@ export const expensesApi = {
 
   create: async (data: CreateExpenseRequest, receipts?: File[]): Promise<{ success: boolean; data: { expense: Expense } }> => {
     const formData = new FormData();
-    
+
     // Add expense data
     Object.keys(data).forEach(key => {
       const value = data[key as keyof CreateExpenseRequest];
@@ -282,7 +294,7 @@ export const expensesApi = {
 
   update: async (id: string, data: Partial<CreateExpenseRequest>, receipts?: File[]): Promise<{ success: boolean; data: { expense: Expense } }> => {
     const formData = new FormData();
-    
+
     // Add expense data
     Object.keys(data).forEach(key => {
       const value = data[key as keyof CreateExpenseRequest];

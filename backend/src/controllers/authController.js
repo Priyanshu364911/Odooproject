@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Company from '../models/Company.js';
 import Category from '../models/Category.js';
@@ -123,12 +124,34 @@ export const signup = async (req, res) => {
     // Get currency for the country
     const currency = await getCountryCurrency(country);
 
-    // Create company first
+    // Create a temporary ObjectId for company
+    const tempCompanyId = new mongoose.Types.ObjectId();
+
+    // Create admin user first with temporary company ID
+    const user = new User({
+      firstName,
+      lastName,
+      email: email.toLowerCase(),
+      password,
+      role: 'admin',
+      company: tempCompanyId,
+      phone: phone || undefined,
+      department: department || undefined,
+      position: position || undefined,
+      preferences: {
+        currency
+      }
+    });
+
+    // Save user with validation disabled to bypass company requirement
+    const savedUser = await user.save({ validateBeforeSave: false });
+
+    // Create company with admin reference
     const company = new Company({
       name: companyName,
       country,
       currency,
-      admin: null, // Will be set after user creation
+      admin: savedUser._id,
       approvalWorkflow: {
         enabled: true,
         levels: [
@@ -152,32 +175,11 @@ export const signup = async (req, res) => {
       }
     });
 
-    // Create admin user
-    const user = new User({
-      firstName,
-      lastName,
-      email: email.toLowerCase(),
-      password,
-      role: 'admin',
-      company: null, // Will be set after company creation
-      phone: phone || undefined,
-      department: department || undefined,
-      position: position || undefined,
-      preferences: {
-        currency
-      }
-    });
-
-    // Save company temporarily without admin
+    // Save company
     const savedCompany = await company.save();
     
-    // Set company reference in user and save
-    user.company = savedCompany._id;
-    const savedUser = await user.save();
-
-    // Update company with admin reference
-    savedCompany.admin = savedUser._id;
-    await savedCompany.save();
+    // Update user with correct company reference
+    await User.findByIdAndUpdate(savedUser._id, { company: savedCompany._id });
 
     // Create default categories
     await createDefaultCategories(savedCompany, savedUser);
