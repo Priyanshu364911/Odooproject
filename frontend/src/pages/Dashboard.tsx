@@ -129,9 +129,14 @@ export default function Dashboard() {
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Total Submitted"
+            title="Total Amount"
             value={formatCurrency(stats.totalSubmitted)}
             icon={DollarSign}
+          />
+          <StatCard
+            title="Total Expenses"
+            value={stats.totalCount.toString()}
+            icon={Receipt}
           />
           <StatCard
             title="Pending Approval"
@@ -142,11 +147,6 @@ export default function Dashboard() {
             title="Approved"
             value={stats.approved.toString()}
             icon={CheckCircle}
-          />
-          <StatCard
-            title="Total Expenses"
-            value={stats.totalCount.toString()}
-            icon={Receipt}
           />
         </div>
 

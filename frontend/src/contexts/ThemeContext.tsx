@@ -20,7 +20,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return stored || 'system';
   });
 
-  const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('light');
+  const [actualTheme, setActualTheme] = useState<'light' | 'dark'>(() => {
+    // Initialize with system preference or light as fallback
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+  });
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -34,13 +40,22 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         resolvedTheme = theme;
       }
       
+      console.log('Updating theme to:', resolvedTheme);
       setActualTheme(resolvedTheme);
       
+      // Remove both classes first
       root.classList.remove('light', 'dark');
+      
+      // Add the resolved theme class
       root.classList.add(resolvedTheme);
+      
+      // Also set data attribute for additional styling hooks
+      root.setAttribute('data-theme', resolvedTheme);
       
       // Store the theme preference
       localStorage.setItem('theme', theme);
+      
+      console.log('Root classes after update:', root.className);
     };
 
     updateTheme();
@@ -57,9 +72,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme]);
 
+  const handleSetTheme = (newTheme: Theme) => {
+    console.log('Setting theme to:', newTheme);
+    setTheme(newTheme);
+  };
+
   const value: ThemeContextType = {
     theme,
-    setTheme,
+    setTheme: handleSetTheme,
     actualTheme,
   };
 

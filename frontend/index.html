@@ -21,6 +21,22 @@
   </head>
 
   <body>
+    <script>
+      // Prevent theme flashing by setting initial theme before React loads
+      (function() {
+        const theme = localStorage.getItem('theme') || 'system';
+        let resolvedTheme = 'light';
+        
+        if (theme === 'system') {
+          resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } else {
+          resolvedTheme = theme;
+        }
+        
+        document.documentElement.classList.add(resolvedTheme);
+        document.documentElement.setAttribute('data-theme', resolvedTheme);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
