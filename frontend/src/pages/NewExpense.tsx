@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +13,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, X, FileText } from "lucide-react";
+import { Upload, X, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { expensesApi, categoriesApi, Category } from "@/lib/api";
 
 export default function NewExpense() {
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [files, setFiles] = useState<File[]>([]);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    amount: "",
+    currency: "USD",
+    category: "",
+    expenseDate: "",
+    paymentMethod: "credit_card",
+  });
+
+  // Get today's date in YYYY-MM-DD format for max date validation
+  const today = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await categoriesApi.getAll();
+      if (response.success) {
+        setCategories(response.data.categories);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(e.target.files || []);
@@ -28,16 +66,64 @@ export default function NewExpense() {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Expense Submitted",
-      description: "Your expense report has been submitted for approval.",
-    });
+    
+    // Validate required fields
+    if (!formData.title || !formData.amount || !formData.category || !formData.expenseDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate date is not in the future
+    if (new Date(formData.expenseDate) > new Date()) {
+      toast({
+        title: "Invalid Date",
+        description: "Expense date cannot be in the future.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const expenseData = {
+        title: formData.title,
+        description: formData.description,
+        amount: parseFloat(formData.amount),
+        currency: formData.currency,
+        category: formData.category,
+        expenseDate: formData.expenseDate,
+        paymentMethod: formData.paymentMethod,
+      };
+
+      const response = await expensesApi.create(expenseData, files);
+      
+      if (response.success) {
+        toast({
+          title: "Expense Submitted",
+          description: "Your expense report has been submitted for approval.",
+        });
+        navigate('/expenses');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to submit expense",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <AppLayout userRole="employee">
+    <AppLayout userRole={user?.role || 'employee'}>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
         {/* Header */}
         <div>
@@ -54,6 +140,17 @@ export default function NewExpense() {
               <CardTitle>Expense Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  placeholder="Brief description of the expense"
+                  value={formData.title}
+                  onChange={(e) => handleInputChange("title", e.target.value)}
+                  required
+                />
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount *</Label>
@@ -61,21 +158,27 @@ export default function NewExpense() {
                     id="amount"
                     type="number"
                     step="0.01"
+                    min="0"
                     placeholder="0.00"
+                    value={formData.amount}
+                    onChange={(e) => handleInputChange("amount", e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency *</Label>
-                  <Select defaultValue="usd">
+                  <Select 
+                    value={formData.currency}
+                    onValueChange={(value) => handleInputChange("currency", value)}
+                  >
                     <SelectTrigger id="currency">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="usd">USD - US Dollar</SelectItem>
-                      <SelectItem value="eur">EUR - Euro</SelectItem>
-                      <SelectItem value="gbp">GBP - British Pound</SelectItem>
-                      <SelectItem value="cad">CAD - Canadian Dollar</SelectItem>
+                      <SelectItem value="USD">USD - US Dollar</SelectItem>
+                      <SelectItem value="EUR">EUR - Euro</SelectItem>
+                      <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                      <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -84,32 +187,65 @@ export default function NewExpense() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
-                  <Select>
+                  <Select 
+                    value={formData.category}
+                    onValueChange={(value) => handleInputChange("category", value)}
+                  >
                     <SelectTrigger id="category">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="meals">Meals & Entertainment</SelectItem>
-                      <SelectItem value="travel">Travel</SelectItem>
-                      <SelectItem value="office">Office Supplies</SelectItem>
-                      <SelectItem value="training">Training & Development</SelectItem>
-                      <SelectItem value="client">Client Relations</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category._id} value={category._id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="date">Date *</Label>
-                  <Input id="date" type="date" required />
+                  <Label htmlFor="date">Expense Date *</Label>
+                  <Input 
+                    id="date" 
+                    type="date" 
+                    max={today}
+                    value={formData.expenseDate}
+                    onChange={(e) => handleInputChange("expenseDate", e.target.value)}
+                    required 
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Date cannot be in the future
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
+                <Label htmlFor="paymentMethod">Payment Method</Label>
+                <Select 
+                  value={formData.paymentMethod}
+                  onValueChange={(value) => handleInputChange("paymentMethod", value)}
+                >
+                  <SelectTrigger id="paymentMethod">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="credit_card">Credit Card</SelectItem>
+                    <SelectItem value="debit_card">Debit Card</SelectItem>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="company_card">Company Card</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
                   placeholder="Provide details about this expense..."
                   rows={4}
-                  required
+                  value={formData.description}
+                  onChange={(e) => handleInputChange("description", e.target.value)}
                 />
               </div>
             </CardContent>
@@ -174,10 +310,24 @@ export default function NewExpense() {
 
           {/* Actions */}
           <div className="flex gap-4 justify-end">
-            <Button type="button" variant="outline">
-              Save as Draft
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => navigate('/expenses')}
+              disabled={loading}
+            >
+              Cancel
             </Button>
-            <Button type="submit">Submit for Approval</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit for Approval"
+              )}
+            </Button>
           </div>
         </form>
       </div>

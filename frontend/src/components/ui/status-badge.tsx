@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-type Status = "pending" | "approved" | "rejected" | "draft";
+type Status = "pending" | "approved" | "rejected" | "draft" | "submitted" | "pending_approval" | "reimbursed";
 
 interface StatusBadgeProps {
   status: Status;
@@ -24,6 +24,18 @@ const statusConfig = {
   draft: {
     label: "Draft",
     className: "badge-draft",
+  },
+  submitted: {
+    label: "Submitted",
+    className: "badge-pending",
+  },
+  pending_approval: {
+    label: "Pending Approval",
+    className: "badge-pending",
+  },
+  reimbursed: {
+    label: "Reimbursed",
+    className: "badge-approved",
   },
 };
 
