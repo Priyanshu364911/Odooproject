@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base colors - Professional white theme with green accents */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    
+    /* Card styling */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    
+    /* Popover styling */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    
+    /* Primary - Professional Green */
+    --primary: 142 71% 36%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 142 71% 32%;
+    
+    /* Secondary - Lighter Green */
+    --secondary: 142 76% 52%;
+    --secondary-foreground: 0 0% 0%;
+    
+    /* Muted - Subtle Gray */
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
+    
+    /* Accent - Surface Gray */
+    --accent: 220 13% 98%;
+    --accent-foreground: 0 0% 0%;
+    
+    /* Destructive - Red for errors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Status colors */
+    --status-pending: 38 92% 50%;
+    --status-pending-foreground: 0 0% 0%;
+    --status-approved: 142 71% 36%;
+    --status-approved-foreground: 0 0% 100%;
+    --status-rejected: 0 84% 60%;
+    --status-rejected-foreground: 0 0% 100%;
+    --status-draft: 215 16% 47%;
+    --status-draft-foreground: 0 0% 100%;
+    
+    /* Borders and inputs */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 142 71% 36%;
+    
+    /* Border radius */
+    --radius: 0.5rem;
+    
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 142 71% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 142 71% 36%;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    
+    /* Transitions */
+    --transition-base: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 142 76% 52%;
+    --primary-foreground: 0 0% 0%;
+    --primary-hover: 142 76% 48%;
+    --secondary: 142 71% 36%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 215 16% 20%;
+    --muted-foreground: 215 16% 65%;
+    --accent: 215 16% 15%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 16% 20%;
+    --input: 215 16% 20%;
+    --ring: 142 76% 52%;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 142 76% 52%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 215 16% 15%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 215 16% 20%;
+    --sidebar-ring: 142 76% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+
+@layer components {
+  /* Status badge variants */
+  .badge-pending {
+    @apply bg-status-pending text-status-pending-foreground;
+  }
+  
+  .badge-approved {
+    @apply bg-status-approved text-status-approved-foreground;
+  }
+  
+  .badge-rejected {
+    @apply bg-status-rejected text-status-rejected-foreground;
+  }
+  
+  .badge-draft {
+    @apply bg-status-draft text-status-draft-foreground;
+  }
+}
+
+@layer utilities {
+  /* Animation utilities */
+  .animate-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Hover scale effect */
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-[1.02];
+  }
+}
