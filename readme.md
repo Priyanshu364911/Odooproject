@@ -16,9 +16,11 @@ Companies often struggle with **manual expense reimbursement processes** that ar
 ## ✨ Features
 
 ### 🔐 Authentication & User Management
+- **Complete signup flow** with company creation and profile setup
 - **Auto-company creation** on first signup with country-based currency
 - **Role-based access** (Admin, Manager, Employee)
 - **Manager-employee relationships** for approval chains
+- **Multi-step registration** with personal, company, and professional information
 
 ### 💰 Expense Submission
 - **Multi-currency expense claims**

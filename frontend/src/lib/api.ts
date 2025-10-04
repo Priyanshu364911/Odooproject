@@ -71,6 +71,9 @@ export interface SignupRequest {
   password: string;
   companyName: string;
   country: string;
+  phone?: string;
+  department?: string;
+  position?: string;
 }
 
 export interface AuthResponse {

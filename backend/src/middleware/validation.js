@@ -25,7 +25,10 @@ const signupSchema = Joi.object({
   email: Joi.string().email().lowercase().required(),
   password: Joi.string().min(6).max(128).required(),
   companyName: Joi.string().trim().min(2).max(100).required(),
-  country: Joi.string().trim().min(2).max(100).required()
+  country: Joi.string().trim().min(2).max(100).required(),
+  phone: Joi.string().trim().max(20).optional().allow(''),
+  department: Joi.string().trim().max(100).optional().allow(''),
+  position: Joi.string().trim().max(100).optional().allow('')
 });
 
 const loginSchema = Joi.object({

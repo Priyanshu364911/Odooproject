@@ -99,14 +99,17 @@ const createDefaultCategories = async (company, admin) => {
  */
 export const signup = async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      email,
-      password,
-      companyName,
-      country
-    } = req.body;
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    companyName,
+    country,
+    phone,
+    department,
+    position
+  } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
@@ -157,6 +160,9 @@ export const signup = async (req, res) => {
       password,
       role: 'admin',
       company: null, // Will be set after company creation
+      phone: phone || undefined,
+      department: department || undefined,
+      position: position || undefined,
       preferences: {
         currency
       }

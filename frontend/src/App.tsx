@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import NewExpense from "./pages/NewExpense";
@@ -50,6 +51,10 @@ const AppRoutes = () => {
         <Route 
           path="/login" 
           element={user ? <Navigate to="/dashboard" replace /> : <Login />} 
+        />
+        <Route 
+          path="/signup" 
+          element={user ? <Navigate to="/dashboard" replace /> : <Signup />} 
         />
         <Route 
           path="/dashboard" 
