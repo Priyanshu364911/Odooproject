@@ -321,6 +321,7 @@ export const updateProfile = async (req, res) => {
     const {
       firstName,
       lastName,
+      email,
       phone,
       department,
       position,
@@ -335,12 +336,27 @@ export const updateProfile = async (req, res) => {
       });
     }
 
+    // Check if email is being changed and if it's already taken
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ 
+        email: email.toLowerCase(),
+        _id: { $ne: user._id }
+      });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is already in use by another account'
+        });
+      }
+      user.email = email.toLowerCase();
+    }
+
     // Update fields
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
-    if (phone) user.phone = phone;
-    if (department) user.department = department;
-    if (position) user.position = position;
+    if (phone !== undefined) user.phone = phone; // Allow empty string
+    if (department !== undefined) user.department = department; // Allow empty string
+    if (position !== undefined) user.position = position; // Allow empty string
     if (preferences) {
       user.preferences = { ...user.preferences, ...preferences };
     }

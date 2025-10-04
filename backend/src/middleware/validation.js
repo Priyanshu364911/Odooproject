@@ -39,9 +39,10 @@ const loginSchema = Joi.object({
 const updateProfileSchema = Joi.object({
   firstName: Joi.string().trim().min(2).max(50),
   lastName: Joi.string().trim().min(2).max(50),
-  phone: Joi.string().trim().max(20),
-  department: Joi.string().trim().max(100),
-  position: Joi.string().trim().max(100),
+  email: Joi.string().email().lowercase(),
+  phone: Joi.string().trim().max(20).allow(''),
+  department: Joi.string().trim().max(100).allow(''),
+  position: Joi.string().trim().max(100).allow(''),
   preferences: Joi.object({
     currency: Joi.string().length(3),
     notifications: Joi.object({
