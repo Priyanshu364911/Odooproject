@@ -52,20 +52,24 @@ export default function Approvals() {
         setPendingExpenses(pendingResponse.data.expenses);
       }
 
-      // Fetch approved and rejected expenses
-      const allExpensesResponse = await expensesApi.getAll({
-        status: 'approved,rejected',
-        limit: 50,
+      // Fetch approved expenses
+      const approvedResponse = await expensesApi.getAll({
+        status: 'approved',
+        limit: 25,
       });
-      if (allExpensesResponse.success) {
-        const approved = allExpensesResponse.data.expenses.filter(
-          (expense) => expense.status === 'approved'
-        );
-        const rejected = allExpensesResponse.data.expenses.filter(
-          (expense) => expense.status === 'rejected'
-        );
-        setApprovedExpenses(approved);
-        setRejectedExpenses(rejected);
+      
+      // Fetch rejected expenses
+      const rejectedResponse = await expensesApi.getAll({
+        status: 'rejected',
+        limit: 25,
+      });
+
+      if (approvedResponse.success) {
+        setApprovedExpenses(approvedResponse.data.expenses);
+      }
+      
+      if (rejectedResponse.success) {
+        setRejectedExpenses(rejectedResponse.data.expenses);
       }
 
       // Calculate stats
@@ -76,10 +80,9 @@ export default function Approvals() {
 
       // Count approved today
       const today = new Date().toDateString();
-      const approvedToday = allExpensesResponse.success
-        ? allExpensesResponse.data.expenses.filter(
+      const approvedToday = approvedResponse.success
+        ? approvedResponse.data.expenses.filter(
           (expense) =>
-            expense.status === 'approved' &&
             new Date(expense.updatedAt).toDateString() === today
         ).length
         : 0;

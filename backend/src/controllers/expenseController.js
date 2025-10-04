@@ -12,8 +12,10 @@ const getExchangeRate = async (from, to) => {
   if (from === to) return 1;
   
   try {
+    // Use a simpler approach for exchange rates
+    const apiKey = process.env.EXCHANGE_RATE_API_KEY;
     const response = await axios.get(
-      `${process.env.EXCHANGE_RATE_BASE_URL}/${process.env.EXCHANGE_RATE_API_KEY}/pair/${from}/${to}`
+      `https://v6.exchangerate-api.com/v6/${apiKey}/pair/${from}/${to}`
     );
     
     if (response.data.result === 'success') {
@@ -21,6 +23,7 @@ const getExchangeRate = async (from, to) => {
     }
     
     // Fallback to a basic rate if API fails
+    console.warn('Exchange rate API returned error:', response.data);
     return 1;
   } catch (error) {
     console.warn('Exchange rate API error:', error.message);
@@ -93,6 +96,12 @@ const setupApprovalWorkflow = async (expense, company) => {
  */
 export const createExpense = async (req, res) => {
   try {
+    console.log('=== CREATE EXPENSE START ===');
+    console.log('Received expense data:', req.body);
+    console.log('Received files:', req.files?.length || 0);
+    console.log('User:', req.user?.id);
+    console.log('User company:', req.user?.company);
+
     const {
       title,
       description,
@@ -105,7 +114,19 @@ export const createExpense = async (req, res) => {
       tags
     } = req.body;
 
+    // Basic validation
+    if (!title || !amount || !category || !expenseDate) {
+      console.log('Missing required fields');
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, amount, category, expenseDate'
+      });
+    }
+
+    console.log('Step 1: Basic validation passed');
+
     // Verify category exists and belongs to user's company
+    console.log('Step 2: Checking category:', category);
     const categoryDoc = await Category.findOne({
       _id: category,
       company: req.user.company,
@@ -113,72 +134,109 @@ export const createExpense = async (req, res) => {
     });
 
     if (!categoryDoc) {
+      console.log('Category not found or inactive');
       return res.status(400).json({
         success: false,
         message: 'Invalid or inactive category'
       });
     }
 
+    console.log('Step 3: Category found:', categoryDoc.name);
+
     // Get company details
+    console.log('Step 4: Getting company details');
     const company = await Company.findById(req.user.company);
     
-    // Convert amount to company's base currency if different
-    let convertedAmount = null;
-    if (currency !== company.currency) {
-      convertedAmount = await convertCurrency(amount, currency, company.currency);
+    if (!company) {
+      console.log('Company not found');
+      return res.status(400).json({
+        success: false,
+        message: 'Company not found'
+      });
     }
 
-    // Create expense
+    console.log('Step 5: Company found:', company.name);
+
+    // Skip currency conversion for now to isolate issues
+    console.log('Step 6: Generating expense number');
+    
+    // Generate expense number manually
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    
+    // Find the last expense number for this month
+    const lastExpense = await Expense
+      .findOne({
+        company: req.user.company,
+        expenseNumber: new RegExp(`^EXP-${year}${month}`)
+      })
+      .sort({ expenseNumber: -1 });
+    
+    let sequence = 1;
+    if (lastExpense) {
+      const lastSequence = parseInt(lastExpense.expenseNumber.split('-')[2]);
+      sequence = lastSequence + 1;
+    }
+    
+    const expenseNumber = `EXP-${year}${month}-${String(sequence).padStart(4, '0')}`;
+    console.log('Generated expense number:', expenseNumber);
+
+    console.log('Step 7: Creating expense object');
+
+    // Create expense with generated expense number
     const expense = new Expense({
+      expenseNumber,
       title,
-      description,
-      amount,
+      description: description || '',
+      amount: parseFloat(amount),
       currency,
-      convertedAmount,
+      convertedAmount: null, // Skip conversion for now
       category,
       expenseDate: new Date(expenseDate),
       submittedBy: req.user.id,
       company: req.user.company,
-      merchant,
-      paymentMethod,
-      tags,
+      merchant: merchant || undefined,
+      paymentMethod: paymentMethod || 'credit_card',
+      tags: tags || [],
       receipts: req.uploadedFiles || [],
-      status: 'submitted'
+      status: 'submitted',
+      approvals: [], // Skip approval workflow for now
+      currentApprovalLevel: 0
     });
 
-    // Set up approval workflow
-    expense.approvals = await setupApprovalWorkflow(expense, company);
-    
-    // Update status based on approvals
-    if (expense.approvals.length > 0) {
-      expense.status = 'pending_approval';
-      expense.currentApprovalLevel = 1;
-    } else {
-      expense.status = 'approved'; // Auto-approve if no workflow
-    }
-
+    console.log('Step 8: Saving expense to database');
     await expense.save();
 
-    // Populate expense data for response
-    const populatedExpense = await Expense.findById(expense._id)
-      .populate('category', 'name code color icon')
-      .populate('submittedBy', 'firstName lastName email')
-      .populate('approvals.approver', 'firstName lastName email role');
+    console.log('Step 9: Expense saved successfully, ID:', expense._id);
 
+    // Simple response without complex population
     res.status(201).json({
       success: true,
       message: 'Expense created successfully',
       data: {
-        expense: populatedExpense
+        expense: {
+          _id: expense._id,
+          title: expense.title,
+          amount: expense.amount,
+          status: expense.status
+        }
       }
     });
 
+    console.log('=== CREATE EXPENSE SUCCESS ===');
+
   } catch (error) {
-    console.error('Create expense error:', error);
+    console.error('=== CREATE EXPENSE ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    
     res.status(500).json({
       success: false,
       message: 'Error creating expense',
-      error: error.message
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

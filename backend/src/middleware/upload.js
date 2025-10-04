@@ -116,26 +116,41 @@ export const uploadMultiple = (fieldName, maxCount = 5) => {
 export const processFileUploads = async (req, res, next) => {
   try {
     if (!req.files && !req.file) {
+      req.uploadedFiles = [];
       return next();
     }
 
     const files = req.files || [req.file];
-    const uploadPromises = files.map(async (file) => {
-      const uploadResult = await uploadToCloudinary(file.buffer, {
-        folder: `expense-receipts/${req.user.company}`,
-        public_id: `${Date.now()}-${file.originalname.split('.')[0]}`
-      });
-      
-      return {
-        url: uploadResult.url,
-        publicId: uploadResult.publicId,
-        filename: uploadResult.filename || file.originalname,
-        size: uploadResult.size,
-        mimetype: uploadResult.mimetype || file.mimetype
-      };
+    console.log(`Processing ${files.length} file(s) for upload`);
+
+    const uploadPromises = files.map(async (file, index) => {
+      try {
+        console.log(`Uploading file ${index + 1}: ${file.originalname} (${file.size} bytes)`);
+        
+        const uploadResult = await uploadToCloudinary(file.buffer, {
+          folder: `expense-receipts/${req.user.company}`,
+          public_id: `${Date.now()}-${file.originalname.split('.')[0]}`,
+          filename: file.originalname,
+          mimetype: file.mimetype
+        });
+        
+        console.log(`Successfully uploaded file ${index + 1}: ${uploadResult.url}`);
+        
+        return {
+          url: uploadResult.url,
+          publicId: uploadResult.publicId,
+          filename: uploadResult.filename || file.originalname,
+          size: uploadResult.size || file.size,
+          mimetype: uploadResult.mimetype || file.mimetype
+        };
+      } catch (uploadError) {
+        console.error(`Error uploading file ${index + 1}:`, uploadError);
+        throw uploadError;
+      }
     });
 
     req.uploadedFiles = await Promise.all(uploadPromises);
+    console.log(`Successfully processed ${req.uploadedFiles.length} file(s)`);
     next();
   } catch (error) {
     console.error('File upload error:', error);

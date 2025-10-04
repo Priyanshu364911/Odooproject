@@ -24,11 +24,25 @@ const router = express.Router();
 router.use(authenticate);
 
 /**
+ * @route   POST /api/expenses/test
+ * @desc    Test endpoint
+ * @access  Private
+ */
+router.post('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Test endpoint working',
+    user: req.user?.id,
+    body: req.body
+  });
+});
+
+/**
  * @route   POST /api/expenses
  * @desc    Create new expense
  * @access  Private
  */
-router.post('/', uploadReceipts, validateCreateExpense, createExpense);
+router.post('/', uploadReceipts, createExpense);
 
 /**
  * @route   GET /api/expenses

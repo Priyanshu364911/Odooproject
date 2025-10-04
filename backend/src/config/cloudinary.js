@@ -11,10 +11,33 @@ cloudinary.config({
 });
 
 /**
+ * Check if Cloudinary is properly configured
+ */
+const isCloudinaryConfigured = () => {
+  return process.env.CLOUDINARY_CLOUD_NAME && 
+         process.env.CLOUDINARY_CLOUD_NAME !== 'PROJECT' &&
+         process.env.CLOUDINARY_API_KEY && 
+         process.env.CLOUDINARY_API_SECRET;
+};
+
+/**
  * Upload file to Cloudinary
  */
 export const uploadToCloudinary = async (fileBuffer, options = {}) => {
   try {
+    // Check if Cloudinary is configured
+    if (!isCloudinaryConfigured()) {
+      console.warn('Cloudinary not configured, skipping file upload');
+      // Return a mock response for development
+      return {
+        url: `data:${options.mimetype || 'application/octet-stream'};base64,${fileBuffer.toString('base64')}`,
+        publicId: `local-${Date.now()}`,
+        filename: options.filename || 'receipt',
+        size: fileBuffer.length,
+        mimetype: options.mimetype || 'application/octet-stream'
+      };
+    }
+
     const uploadOptions = {
       resource_type: 'auto',
       folder: options.folder || 'expense-receipts',

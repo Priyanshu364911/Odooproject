@@ -83,7 +83,7 @@ const updateUserSchema = Joi.object({
 // Expense validation schemas
 const createExpenseSchema = Joi.object({
   title: Joi.string().trim().min(2).max(200).required(),
-  description: Joi.string().trim().max(1000),
+  description: Joi.string().trim().max(1000).allow(''),
   amount: Joi.number().positive().max(1000000).required(),
   currency: Joi.string().length(3).default('USD'),
   category: Joi.string().hex().length(24).required(),
@@ -91,9 +91,9 @@ const createExpenseSchema = Joi.object({
   merchant: Joi.object({
     name: Joi.string().trim().max(100),
     location: Joi.string().trim().max(200)
-  }),
+  }).optional(),
   paymentMethod: Joi.string().valid('cash', 'credit_card', 'debit_card', 'bank_transfer', 'company_card').default('credit_card'),
-  tags: Joi.array().items(Joi.string().trim().max(50))
+  tags: Joi.array().items(Joi.string().trim().max(50)).optional()
 });
 
 const updateExpenseSchema = Joi.object({
