@@ -208,6 +208,221 @@ docker-compose up --build
 5. Open a Pull Request
 
 
+## �️ Database Schema
+
+The application uses MongoDB with Mongoose ODM. Below is the complete database schema with relationships and indexes.
+
+### Core Models
+
+#### User Model
+```javascript
+{
+  _id: ObjectId,
+  firstName: String (required),
+  lastName: String (required),
+  email: String (required, unique, lowercase),
+  password: String (required, hashed),
+  role: String (enum: ['admin', 'manager', 'employee']),
+  company: ObjectId (ref: Company, required),
+  manager: ObjectId (ref: User, nullable),
+  department: String,
+  position: String,
+  phone: String,
+  avatar: {
+    url: String,
+    publicId: String
+  },
+  preferences: {
+    currency: String (default: 'USD'),
+    notifications: {
+      email: Boolean (default: true),
+      expenseApproval: Boolean (default: true),
+      statusUpdates: Boolean (default: true)
+    }
+  },
+  isActive: Boolean (default: true),
+  lastLogin: Date,
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+#### Company Model
+```javascript
+{
+  _id: ObjectId,
+  name: String (required),
+  country: String (required),
+  currency: String (required, default: 'USD'),
+  admin: ObjectId (ref: User, required),
+  approvalWorkflow: {
+    enabled: Boolean (default: true),
+    levels: [{
+      level: Number,
+      name: String, // Manager, Finance, Director
+      rules: [{
+        type: String (enum: ['percentage', 'specific_approver', 'hybrid']),
+        percentage: Number (0-100),
+        specificApprovers: [ObjectId] (ref: User),
+        conditions: {
+          minAmount: Number,
+          maxAmount: Number,
+          categories: [String]
+        }
+      }]
+    }]
+  },
+  settings: {
+    requireReceiptForExpenses: Boolean (default: true),
+    autoApprovalLimit: Number (default: 0),
+    allowMultiCurrency: Boolean (default: true)
+  },
+  isActive: Boolean (default: true),
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+#### Expense Model
+```javascript
+{
+  _id: ObjectId,
+  expenseNumber: String (unique, auto-generated),
+  title: String (required),
+  description: String,
+  amount: Number (required, min: 0),
+  currency: String (required, default: 'USD'),
+  convertedAmount: {
+    amount: Number,
+    currency: String,
+    exchangeRate: Number,
+    convertedAt: Date
+  },
+  category: ObjectId (ref: Category, required),
+  expenseDate: Date (required),
+  submittedBy: ObjectId (ref: User, required),
+  company: ObjectId (ref: Company, required),
+  receipts: [{
+    url: String (required),
+    publicId: String (required),
+    filename: String,
+    size: Number,
+    mimetype: String,
+    uploadedAt: Date
+  }],
+  status: String (enum: ['draft', 'submitted', 'pending_approval', 'approved', 'rejected', 'reimbursed']),
+  approvals: [{
+    approver: ObjectId (ref: User, required),
+    status: String (enum: ['pending', 'approved', 'rejected']),
+    comments: String,
+    approvedAt: Date,
+    level: Number (required)
+  }],
+  currentApprovalLevel: Number (default: 1),
+  tags: [String],
+  merchant: {
+    name: String,
+    location: String
+  },
+  paymentMethod: String (enum: ['cash', 'credit_card', 'debit_card', 'bank_transfer', 'company_card']),
+  reimbursement: {
+    status: String (enum: ['pending', 'processed', 'completed']),
+    method: String,
+    referenceNumber: String,
+    processedAt: Date,
+    processedBy: ObjectId (ref: User)
+  },
+  metadata: {
+    ocrProcessed: Boolean (default: false),
+    ocrData: Mixed,
+    ipAddress: String,
+    userAgent: String
+  },
+  isActive: Boolean (default: true),
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+#### Category Model
+```javascript
+{
+  _id: ObjectId,
+  name: String (required),
+  description: String,
+  company: ObjectId (ref: Company, required),
+  code: String (required, uppercase, auto-generated),
+  color: String (default: '#3B82F6'),
+  icon: String (default: 'Receipt'),
+  isDefault: Boolean (default: false),
+  settings: {
+    requireApproval: Boolean (default: true),
+    maxAmount: Number (min: 0),
+    requireReceipt: Boolean (default: true)
+  },
+  isActive: Boolean (default: true),
+  createdBy: ObjectId (ref: User, required),
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### Relationships
+
+```mermaid
+erDiagram
+    Company ||--o{ User : "has employees"
+    Company ||--o{ Category : "defines categories"
+    Company ||--o{ Expense : "owns expenses"
+    User ||--o{ User : "manages (manager-employee)"
+    User ||--o{ Expense : "submits expenses"
+    User ||--o{ Approval : "approves expenses"
+    Category ||--o{ Expense : "categorizes"
+    Expense ||--o{ Approval : "has approvals"
+    Expense ||--o{ Receipt : "has receipts"
+```
+
+### Database Indexes
+
+#### User Collection
+- `{ email: 1 }` - Unique login lookup
+- `{ company: 1 }` - Company-based queries
+- `{ manager: 1 }` - Manager hierarchy
+- `{ role: 1 }` - Role-based filtering
+
+#### Company Collection
+- `{ admin: 1 }` - Admin lookup
+- `{ name: 1 }` - Company search
+
+#### Expense Collection
+- `{ submittedBy: 1, status: 1 }` - User expense filtering
+- `{ company: 1, status: 1 }` - Company expense overview
+- `{ category: 1 }` - Category-based reports
+- `{ expenseDate: -1 }` - Date-based sorting
+- `{ expenseNumber: 1 }` - Unique expense lookup
+- `{ company: 1, submittedBy: 1, status: 1 }` - Compound user queries
+- `{ company: 1, expenseDate: -1 }` - Company timeline
+
+#### Category Collection
+- `{ company: 1, code: 1 }` - Unique category per company
+- `{ company: 1, isActive: 1 }` - Active categories lookup
+
+### Data Flow
+
+1. **User Registration**: Creates Company → Creates Admin User → Sets up default Categories
+2. **Expense Submission**: User creates Expense → Uploads Receipts → Triggers Approval Workflow
+3. **Approval Process**: approvals based on Company workflow rules
+4. **Reimbursement**: Approved expenses move to reimbursement processing
+
+### Performance Considerations
+
+- **Compound Indexes**: Optimized for common query patterns
+- **Selective Fields**: Only necessary fields indexed to minimize storage
+- **Aggregation Pipeline**: Used for dashboard statistics and reporting
+- **Virtual Fields**: Computed fields like `fullName` and `approvalProgress`
+
 ## 🙏 Acknowledgments
 
 - OCR technology powered by Tesseract.js
