@@ -202,7 +202,8 @@ export const createExpense = async (req, res) => {
       receipts: req.uploadedFiles || [],
       status: 'submitted',
       approvals: [], // Skip approval workflow for now
-      currentApprovalLevel: 0
+      currentApprovalLevel: 0,
+      isActive: true // Explicitly set isActive
     });
 
     console.log('Step 8: Saving expense to database');
@@ -668,23 +669,52 @@ export const getExpenseStats = async (req, res) => {
         break;
     }
 
+    // Simplified query without date filter for debugging
     const baseQuery = {
       submittedBy: req.user.id,
-      isActive: true,
-      ...dateFilter
+      isActive: true
+      // Temporarily removing date filter: ...dateFilter
     };
 
+    console.log('Stats query:', baseQuery);
+    console.log('User ID:', req.user.id);
+
+    // First, let's check if there are any expenses at all for this user
+    const allUserExpenses = await Expense.find({ submittedBy: req.user.id });
+    console.log('All expenses for user:', allUserExpenses.length);
+    if (allUserExpenses.length > 0) {
+      console.log('Sample expense amount:', allUserExpenses[0].amount, typeof allUserExpenses[0].amount);
+      console.log('Sample expense status:', allUserExpenses[0].status);
+      console.log('Sample expense isActive:', allUserExpenses[0].isActive);
+    }
+
     // Get statistics
-    const [totalExpenses, pendingCount, approvedCount, rejectedCount, totalAmount] = await Promise.all([
+    const [totalExpenses, pendingCount, approvedCount, rejectedCount, totalAmount, approvedAmount] = await Promise.all([
       Expense.countDocuments(baseQuery),
       Expense.countDocuments({ ...baseQuery, status: 'pending_approval' }),
       Expense.countDocuments({ ...baseQuery, status: 'approved' }),
       Expense.countDocuments({ ...baseQuery, status: 'rejected' }),
-      Expense.aggregate([
-        { $match: { ...baseQuery, status: 'approved' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
-      ])
+      // Manual calculation for debugging
+      Expense.find(baseQuery).then(expenses => {
+        const total = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+        console.log('Manual total calculation:', total);
+        console.log('Individual amounts:', expenses.map(exp => ({ amount: exp.amount, type: typeof exp.amount })));
+        return [{ total }];
+      }),
+      Expense.find({ ...baseQuery, status: 'approved' }).then(expenses => {
+        const total = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+        return [{ total }];
+      })
     ]);
+
+    console.log('Stats results:', {
+      totalExpenses,
+      pendingCount,
+      approvedCount,
+      rejectedCount,
+      totalAmount: totalAmount[0]?.total || 0,
+      approvedAmount: approvedAmount[0]?.total || 0
+    });
 
     // Get category breakdown
     const categoryStats = await Expense.aggregate([
@@ -712,7 +742,8 @@ export const getExpenseStats = async (req, res) => {
           pendingApproval: pendingCount,
           approved: approvedCount,
           rejected: rejectedCount,
-          totalAmount: totalAmount[0]?.total || 0
+          totalAmount: totalAmount[0]?.total || 0,
+          approvedAmount: approvedAmount[0]?.total || 0
         },
         categoryBreakdown: categoryStats
       }

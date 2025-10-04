@@ -61,7 +61,14 @@ export default function Dashboard() {
       const statsResponse = await expensesApi.getStats();
       if (statsResponse.success) {
         const { summary } = statsResponse.data;
+        console.log('Stats from backend:', summary);
         setStats({
+          totalSubmitted: summary.totalAmount,
+          pendingApproval: summary.pendingApproval,
+          approved: summary.approved,
+          totalCount: summary.totalExpenses,
+        });
+        console.log('Stats set in frontend:', {
           totalSubmitted: summary.totalAmount,
           pendingApproval: summary.pendingApproval,
           approved: summary.approved,
